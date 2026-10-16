@@ -10,24 +10,26 @@ and the one you are on is marked with `*`.
 
 ```
   recent branches (Enter to switch, q to quit)
-* feature/table-column-virtualisation
-  feature/omni-table-expandable-rows
-  production
+* feature/search-filters
+  main
   fix/login-redirect
+  release/2.4
 ```
 
 ## Install
 
-It is a single Python 3 script with no dependencies beyond git. Put it
-somewhere on your `PATH`:
+Requirements: git and Python 3. The tool is a single script with no other
+dependencies.
+
+Download it to any directory on your `PATH` and make it executable. For
+example, using `/usr/local/bin`:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/harvkay/gitwarp/main/gitwarp -o ~/.local/bin/gitwarp
-chmod +x ~/.local/bin/gitwarp
+curl -fsSL https://raw.githubusercontent.com/harvkay/gitwarp/main/gitwarp -o /usr/local/bin/gitwarp
+chmod +x /usr/local/bin/gitwarp
 ```
 
-If `~/.local/bin` is not on your `PATH` yet, add it (`fish_add_path ~/.local/bin`
-in fish, or `export PATH="$HOME/.local/bin:$PATH"` in your bash or zsh profile).
+Or clone the repository and symlink or copy `gitwarp` onto your `PATH`.
 
 ## Usage
 
