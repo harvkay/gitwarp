@@ -10,10 +10,11 @@ and the one you are on is marked with `*`.
 
 ```
   recent branches (Enter to switch, q to quit)
-* feature/search-filters
+* feature/teach-the-cat-sql
   main
-  fix/login-redirect
-  release/2.4
+  fix/it-works-on-my-machine
+  hotfix/please-dont-ask
+  experiment/rewrite-in-rust-again
 ```
 
 ## Install
