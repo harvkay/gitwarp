@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+"""gitwarp: pick a recently checked-out branch from a menu and switch to it.
+
+The list comes from the reflog's "checkout: moving from A to B" entries, most
+recent first, limited to branches that still exist. Up/Down or j/k move,
+Enter switches, q or Esc quits.
+
+Usage:
+    gitwarp            interactive menu (up to 50 branches)
+    gitwarp -n 20      shorter history
+    gitwarp --list     print the branches and exit
+"""
+
+import argparse
+import os
+import re
+import shutil
+import subprocess
+import sys
+
+DEFAULT_LIMIT = 50
+CHECKOUT_RE = re.compile(r"^checkout: moving from (.+) to (.+)$")
+
+
+def git(*args, check=True):
+    return subprocess.run(
+        ["git", *args], capture_output=True, text=True, check=check
+    ).stdout
+
+
+def current_branch():
+    out = git("symbolic-ref", "--quiet", "--short", "HEAD", check=False).strip()
+    return out or None
+
+
+def recent_branches(limit):
+    """Branch names from the reflog, newest first, deduplicated, existing only."""
+    names = []
+    for line in git("reflog", "show", "--format=%gs").splitlines():
+        match = CHECKOUT_RE.match(line)
+        if match:
+            names.append(match.group(2))
+            names.append(match.group(1))
+
+    existing = set(git("for-each-ref", "--format=%(refname:short)", "refs/heads/").split())
+    seen = set()
+    branches = []
+    for name in names:
+        if name in existing and name not in seen:
+            seen.add(name)
+            branches.append(name)
+            if len(branches) >= limit:
+                break
+    return branches
+
+
+def read_key():
+    """One keypress from a raw terminal, with arrow keys decoded."""
+    key = os.read(sys.stdin.fileno(), 1).decode(errors="ignore")
+    if key != "\x1b":
+        return key
+    rest = os.read(sys.stdin.fileno(), 2).decode(errors="ignore")
+    return {"[A": "up", "[B": "down"}.get(rest, "esc")
+
+
+def choose(branches, current):
+    """Draw the menu in place and return the chosen branch, or None."""
+    import termios
+    import tty
+
+    rows = max(shutil.get_terminal_size().lines - 2, 3)
+    view = min(len(branches), rows)
+    selected = 0
+    top = 0
+    out = sys.stdout
+
+    def draw(first):
+        if not first:
+            out.write(f"\x1b[{view + 1}A")
+        out.write("\x1b[2K  recent branches (Enter to switch, q to quit)\r\n")
+        for i in range(top, top + view):
+            name = branches[i]
+            marker = "*" if name == current else " "
+            line = f"{marker} {name}"
+            if i == selected:
+                line = f"\x1b[7m{line}\x1b[0m"
+            out.write(f"\x1b[2K{line}\r\n")
+        out.flush()
+
+    fd = sys.stdin.fileno()
+    saved = termios.tcgetattr(fd)
+    out.write("\x1b[?25l")
+    try:
+        tty.setraw(fd)
+        draw(first=True)
+        while True:
+            key = read_key()
+            if key in ("up", "k"):
+                selected = max(selected - 1, 0)
+            elif key in ("down", "j"):
+                selected = min(selected + 1, len(branches) - 1)
+            elif key in ("\r", "\n"):
+                return branches[selected]
+            elif key in ("q", "esc", "\x03"):
+                return None
+            top = min(max(top, selected - view + 1), selected)
+            draw(first=False)
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, saved)
+        out.write("\x1b[?25h")
+        out.flush()
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("-n", type=int, default=DEFAULT_LIMIT, help="max branches to show")
+    parser.add_argument("--list", action="store_true", help="print the branches and exit")
+    args = parser.parse_args()
+
+    if subprocess.run(["git", "rev-parse", "--git-dir"], capture_output=True).returncode != 0:
+        sys.exit("gitwarp: not inside a git repository")
+
+    current = current_branch()
+    branches = recent_branches(args.n)
+    if not branches:
+        sys.exit("gitwarp: no checkout history in the reflog")
+
+    if args.list:
+        for name in branches:
+            print(("* " if name == current else "  ") + name)
+        return
+
+    if not sys.stdin.isatty():
+        sys.exit("gitwarp: needs an interactive terminal (use --list otherwise)")
+
+    choice = choose(branches, current)
+    if choice is None:
+        return
+    if choice == current:
+        print(f"already on {choice}")
+        return
+    sys.exit(subprocess.run(["git", "switch", choice]).returncode)
+
+
+if __name__ == "__main__":
+    main()
