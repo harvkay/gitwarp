@@ -19,18 +19,37 @@ and the one you are on is marked with `*`.
 
 ## Install
 
-Requirements: git and Python 3. The tool is a single script with no other
-dependencies.
-
-Download it to any directory on your `PATH` and make it executable. For
-example, using `/usr/local/bin`:
+Requirements: git and Python 3, both already present on almost every Linux
+and macOS machine. The tool is a single script with no other dependencies and
+needs no root to install.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/harvkay/gitwarp/main/gitwarp -o /usr/local/bin/gitwarp
-chmod +x /usr/local/bin/gitwarp
+curl -fsSL https://raw.githubusercontent.com/harvkay/gitwarp/main/install.sh | sh
 ```
 
-Or clone the repository and symlink or copy `gitwarp` onto your `PATH`.
+That downloads `gitwarp` to `~/.local/bin` and, if that directory is not on
+your `PATH` yet, adds it to your bash, zsh or fish startup file. Open a new
+terminal and `gitwarp` is ready. Set `GITWARP_BIN=/some/dir` to install
+elsewhere, and run the same command again to update.
+
+To do it by hand instead, pick one of the following.
+
+User-wide, without root (then make sure `~/.local/bin` is on your `PATH`):
+
+```sh
+mkdir -p ~/.local/bin
+curl -fsSL https://raw.githubusercontent.com/harvkay/gitwarp/main/gitwarp -o ~/.local/bin/gitwarp
+chmod +x ~/.local/bin/gitwarp
+```
+
+System-wide, with sudo (`/usr/local/bin` is on every shell's default `PATH`):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/harvkay/gitwarp/main/gitwarp | sudo tee /usr/local/bin/gitwarp >/dev/null
+sudo chmod +x /usr/local/bin/gitwarp
+```
+
+From a clone of this repository, `./install.sh` installs the local copy.
 
 ## Usage
 
